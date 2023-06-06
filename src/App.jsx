@@ -15,40 +15,55 @@ const activeSymbols = atom({
 function App() {
   
   const [data, setData] = useAtom(activeSymbols);
-  
-  const getActiveSymbols = async ()=> {
-    
-    let symbolsArray = [];
+  const [x, setX] = useState(null)
 
+  const getActiveSymbols = async ()=> {
     try{
       const res = await api.activeSymbols({active_symbols: 'brief',product_type: 'basic'});
+      let tickArray = []
+      setX(res.active_symbols)
 
-      if(res){
-        res.active_symbols.map(async (el)=> {
-          try {
-            if(el.market == 'forex'){
-              setData({
-                ...data,
-                data: data.data.push(el)
+
+      if(!res.error){
+
+        res.active_symbols.map(async (item, index)=> {
+
+          try{
+            if(item.exchange_is_open){
+              const symbol = item.symbol;
+              const tick = await api.subscribe({ticks: symbol});
+
+              tick.subscribe((event)=> {
+                  tickArray[index] = {index: index, price: event.tick.bid}
               })
             }
           }catch(error){
             console.log(error)
-            setData({
-              ...data,
-              error: 'Some Error',
-              isCompleted: true,
-            })
           }
-        });
-      }
+          // 
+          // const his = await api.ticksHistory({
+          //   ticks_history: item.symbol,
+          //   count: 20, 
+          //   style: 'candles', 
+          //   start: 1, 
+          //   end: 'latest', 
+          //   granularity: 7200
+          // })
 
-      setData({
-        ...data,
-        symbols: symbolsArray,
-        isCompleted: true
-      })
-      
+          // if(his){
+          //   let prices = [...his.candles.map(x=> x.close)]
+          //   let average = (prices[prices?.length - 1] - prices[0]) / ((prices[prices?.length - 1] + prices[0])/2)
+          // }
+
+         
+          // }    
+
+        })
+
+        console.log(tickArray)
+        setX(x)
+
+      }
 
     }catch(error) {
       console.log(error)
@@ -62,8 +77,8 @@ function App() {
 
   useEffect(()=> {
     getActiveSymbols();
-    
-  }, [])
+    console.log(data)
+  }, [data])
 
   return (
     <>
@@ -78,7 +93,7 @@ function App() {
             data.isCompleted &&
             <>
               {
-                <ListingWrapper data={data.data}/>
+              //  <ListingWrapper data={data.data}/>
               }
             </>
           }
